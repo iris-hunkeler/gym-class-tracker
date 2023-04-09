@@ -1,0 +1,95 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  gym-class-tracker
+
+  Sample SAM Template for gym-class-tracker
+
+Globals:
+  Function:
+    Timeout: 3
+    MemorySize: 128
+
+Parameters:
+  EmailAddress:
+    Description: 'Required. Email address to send notifications to.'
+    Type: 'String'
+
+Resources:
+  GymClassTrackerTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: gym-class-tracker-table
+      AttributeDefinitions:
+        - AttributeName: partition-key
+          AttributeType: S
+        - AttributeName: sort-key
+          AttributeType: S
+        - AttributeName: entity-name
+          AttributeType: S
+      KeySchema:
+        - AttributeName: partition-key
+          KeyType: HASH
+        - AttributeName: sort-key
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: SortKeyIndex
+          KeySchema:
+            - AttributeName: sort-key
+              KeyType: HASH
+            - AttributeName: partition-key
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: EntityNameIndex
+          KeySchema:
+            - AttributeName: entity-name
+              KeyType: HASH
+            - AttributeName: partition-key
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST 
+  
+  GymSNSTopic:
+    Type: 'AWS::SNS::Topic'
+    Properties:
+      DisplayName: Gym Class Tracker
+      TopicName: gym-class-tracker
+  SNSEmailSubscription:
+    Type: 'AWS::SNS::Subscription'
+    Properties:
+      Protocol: email
+      TopicArn: !Ref GymSNSTopic
+      Endpoint: !Ref EmailAddress
+
+  ExecuteCheckFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: execute-check/
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      Architectures:
+        - x86_64
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref GymClassTrackerTable
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt GymSNSTopic.TopicName
+      Environment:
+        Variables:
+          SNS_TOPIC_ARN: !Ref GymSNSTopic
+      Events:
+        ScheduledEvent:
+          Type: Schedule
+          Properties:
+            Schedule: cron(* * * * ? *)
+            Enabled: True 
+
+Outputs:
+  ExecuteCheckFunction:
+    Description: "Execute Check Lambda Function ARN"
+    Value: !GetAtt ExecuteCheckFunction.Arn
+  ExecuteCheckFunctionIamRole:
+    Description: "Implicit IAM Role created for Execute Check function"
+    Value: !GetAtt ExecuteCheckFunctionRole.Arn
