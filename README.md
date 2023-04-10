@@ -4,10 +4,13 @@ The gym class tracker is a very simple application that can setup a "tracker que
 
 ![c4-context-diagram](docs/rendered/c4-context-diagram.png)
 
-The "tracker query" and its current state are stored in *DynamoDB*. A *Lambda function* contains the logic to call the gym API and check if the class of interest is currently available to be booked. If the availability-status changes, a notification is sent to a (fixed) user using *SNS*. The Lambda Function is called regularly using an *Event Bridge Scheduler* 
+The application is built using a simple serverless setup with *Lambda*, *DynamoDB*, *SNS* and *EventBridge Scheduler*.
 
 ![aws-architecture](docs/rendered/aws-architecture.png)
 
+The "tracker query" and its current state are stored in *DynamoDB*. A *Lambda function* contains the logic to call the gym API and check if the class of interest is currently available to be booked. For any status changes or errors, a notification is sent to a (fixed) user using *SNS*. The Lambda Function is called regularly using an *Event Bridge Scheduler* 
+
+![sequence-diagram](docs/rendered/sequence-diagram.png)
 
 ## Project structure
 
