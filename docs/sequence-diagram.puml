@@ -1,0 +1,33 @@
+@startuml sequence-diagram
+hide footbox
+
+participant "ExecuteCheckFunction" as lambda #508ED8
+participant "GymClassTrackerTable" as dynamodb #508ED8
+participant "GymApi" as api #999999
+participant "GymSNSTopic" as sns #508ED8
+
+
+-> lambda: trigger Lambda function
+activate lambda
+lambda -> dynamodb: Read all tracker queries
+dynamodb --> lambda: All active tracker queries
+    loop for every tracker query
+        lambda -> api: Load gym class
+        api --> lambda: Gym class information
+
+        alt API call successful and response as expected
+            alt active-status has changed
+                lambda -> dynamodb: Update "active-status" and course information
+                lambda -> sns: send notification tracking STARTED or ENDED
+            end 
+            alt availability-status has changed
+                lambda -> dynamodb: Update "availability-status"
+                lambda -> sns: send notification that course is now BOOKABLE or NOT BOOKABLE
+            end
+        else API response not successfully loaded 
+            lambda -> sns: send ERROR notification
+        end
+    end
+<- lambda: return current availability-status
+deactivate lambda
+@enduml

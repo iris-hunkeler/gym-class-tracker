@@ -19,59 +19,64 @@ def lambda_handler(event, context):
     successful_count = 0
     count = 0
     for tracker_query in tracker_queries:
+        partition_key = tracker_query['partition-key']
+        print(f'checking tracker-query {partition_key}')
         is_successful = _check_tracker_query_against_gym_api(table, tracker_query)
 
         count = count + 1
         if is_successful:
             successful_count = successful_count + 1            
 
+    message = f'Checked {count} tracker queries, {successful_count} courses are currently bookable'
+    print(message)
     return {
         'statusCode': 200,
-        'body': json.dumps({'message': f'Checked {count} tracker queries, {successful_count} courses are currently bookable'})
+        'body': json.dumps({'message': message})
     }
 
 def _check_tracker_query_against_gym_api(table, tracker_query):
     print('tracker_query:', tracker_query)
 
+    # API call
     json_data = _build_body_for_api_request(tracker_query['course-title'], 
                             tracker_query['center-id'], 
                             tracker_query['daytime-id'], 
                             tracker_query['weekday-id'])
-
     response = _make_request_to_api(json_data)
 
-    if response.status_code != 200:   
-        message = f'There is an error. The API returned {response.status_code}'     
-        print(f'{message}, let\'s send a notification.')
-        _send_notification(message)
+    # Validation
+    is_valid = _api_response_error_handling(response)
+    if not is_valid:
         return False
     
     response_json = response.json()
     print('response from API:', response_json)
 
-    if not _check_at_least_one_course_found(response_json):
-        message = 'No course found for the search criteria.'     
-        print(f'{message}, let\'s send a notification.')
-        _send_notification(message)
-        return False
-        
-    _update_availability_status(table, tracker_query, response_json)
-
-    status_old = tracker_query['availability-status']
-    status_new = _extract_status_from_api_response(response_json)
-    
-    if status_old != status_new:
-        print('Status has changed, let\'s send a notification.')
-        message = _build_message_for_notification(response_json)
-        _send_notification(message)
-        _update_tracker_status_query_in_dynamo_db(table, tracker_query, status_new)
+    # Check status  
+    _initialize_or_update_active_status(table, tracker_query, response_json)
+    status_new = _update_availability_status(table, tracker_query, response_json)
     
     if status_new == STATUS_AVAILABLE:
         return True
     else:
         return False
 
-def _update_availability_status(table, tracker_query, response_json):
+def _api_response_error_handling(response):
+    if response.status_code != 200:   
+        message = f'There is an error. The API returned {response.status_code}'     
+        print(f'{message}, let\'s send a notification.')
+        _send_notification(message)
+        return False
+    
+    if not _check_at_least_one_course_found(response):
+        message = 'No course found for the search criteria.'     
+        print(f'{message}, let\'s send a notification.')
+        _send_notification(message)
+        return False
+    
+    return True
+
+def _initialize_or_update_active_status(table, tracker_query, response_json):
     course = _extract_course_from_api_response(response_json)
     course_id = _extract_course_id_from_course(course)
     course_date = _extract_date_from_course(course)
@@ -84,9 +89,21 @@ def _update_availability_status(table, tracker_query, response_json):
         _update_tracker_active_status_in_dynamo_db(table, tracker_query)
         _send_notification(f'TRACKING ENDED: You are no longer tracking {_build_course_description(course_name, course_instructor, course_date)}')
 
-def _build_message_for_notification(response):
+def _update_availability_status(table, tracker_query, response_json):
+    status_old = tracker_query['availability-status']
+    status_new = _extract_status_from_api_response(response_json)
+    
+    if status_old != status_new:
+        print('Status has changed, let\'s send a notification.')
+        message = _build_message_for_availability_status_notification(response_json)
+        _send_notification(message)
+        _update_tracker_status_query_in_dynamo_db(table, tracker_query, status_new)
+    
+    return status_new
+
+def _build_message_for_availability_status_notification(response):
     status_new = _extract_status_from_api_response(response)
-    course_description = _build_course_description(response)
+    course_description = _build_course_description_from_response(response)
 
     if status_new == STATUS_AVAILABLE:
         return f'YES: Course {course_description} is now bookable'
@@ -130,7 +147,8 @@ def _make_request_to_api(json_data):
     return response
 
 def _check_at_least_one_course_found(response):
-    courses = response['courses']
+    response_json = response.json()
+    courses = response_json['courses']
     if len(courses) < 1:
         return False
     return True
@@ -142,7 +160,7 @@ def _extract_course_from_api_response(response):
 def _extract_status_from_api_response(response):
     status_new = STATUS_UNKNOWN
     course = _extract_course_from_api_response(response)
-    course_description = _build_course_description(response)
+    course_description = _build_course_description_from_response(response)
     if course['bookable']:
         status_new = STATUS_AVAILABLE
         print(f'Course {course_description} is currently bookable!')
@@ -164,7 +182,7 @@ def _extract_date_from_course(course):
 def _extract_course_id_from_course(course):
     return course['courseIdTac']
 
-def _build_course_description(response):
+def _build_course_description_from_response(response):
     course = _extract_course_from_api_response(response)
     return _build_course_description(_extract_course_name_from_course(course), _extract_instructor_from_course(course), _extract_date_from_course(course))
 

@@ -2,9 +2,6 @@
 
 !define AWSPuml https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v15.0/dist
 !include AWSPuml/AWSCommon.puml
-!include AWSPuml/InternetOfThings/IoTRule.puml
-!include AWSPuml/Analytics/KinesisDataStreams.puml
-!include AWSPuml/ApplicationIntegration/SimpleQueueService.puml
 !include AWSPuml/Compute/Lambda.puml
 !include AWSPuml/Database/DynamoDB.puml
 !include AWSPuml/ApplicationIntegration/EventBridgeScheduler.puml
@@ -24,8 +21,6 @@ scheduler --> execute_check: trigger lambda
 execute_check --> db: load tracker-queries
 execute_check --> db: update tracker-queries
 execute_check --> sns: trigger notification on state change
-sns --> sns_email: send out email to subscriber
-
-
+sns --> sns_email: send out email to subscribe
 
 @enduml
