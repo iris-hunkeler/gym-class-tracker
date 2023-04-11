@@ -45,7 +45,7 @@ def _check_tracker_query_against_gym_api(table, tracker_query):
     response = _make_request_to_api(json_data)
 
     # Validation
-    is_valid = _api_response_error_handling(response)
+    is_valid = _api_response_error_handling(response, table, tracker_query)
     if not is_valid:
         return False
     
@@ -61,7 +61,7 @@ def _check_tracker_query_against_gym_api(table, tracker_query):
     else:
         return False
 
-def _api_response_error_handling(response):
+def _api_response_error_handling(response, table, tracker_query):
     if response.status_code != 200:   
         message = f'There is an error. The API returned {response.status_code}'     
         print(f'{message}, let\'s send a notification.')
@@ -69,7 +69,8 @@ def _api_response_error_handling(response):
         return False
     
     if not _check_at_least_one_course_found(response):
-        message = 'No course found for the search criteria.'     
+        message = 'TRACKING ENDED: No course found for the search criteria.'  
+        _update_tracker_active_status_in_dynamo_db(table, tracker_query)
         print(f'{message}, let\'s send a notification.')
         _send_notification(message)
         return False
@@ -83,11 +84,17 @@ def _initialize_or_update_active_status(table, tracker_query, response_json):
     course_instructor = _extract_instructor_from_course(course)
     course_name = _extract_course_name_from_course(course)
     if 'course-id' not in tracker_query:
-        _initialize_tracker_query_course_information_in_dynamo_db(table, tracker_query, course_id, course_instructor, course_date)
-        _send_notification(f'TRACKING STARTED: You are now tracking {_build_course_description(course_name, course_instructor, course_date)}')
+        _initialize_tracker_query_information(table, tracker_query, course_id, course_name, course_instructor, course_date)
     elif tracker_query['course-id'] != course_id:
-        _update_tracker_active_status_in_dynamo_db(table, tracker_query)
-        _send_notification(f'TRACKING ENDED: You are no longer tracking {_build_course_description(course_name, course_instructor, course_date)}')
+        _deactivate_tracker_query(table, tracker_query, course_name, course_instructor, course_date)
+
+def _initialize_tracker_query_information(table, tracker_query, course_id, course_name, course_instructor, course_date):
+    _initialize_tracker_query_course_information_in_dynamo_db(table, tracker_query, course_id, course_instructor, course_date)
+    _send_notification(f'TRACKING STARTED: You are now tracking {_build_course_description(course_name, course_instructor, course_date)}')
+ 
+def _deactivate_tracker_query(table, tracker_query, course_name, course_instructor, course_date):        
+    _update_tracker_active_status_in_dynamo_db(table, tracker_query)
+    _send_notification(f'TRACKING ENDED: You are no longer tracking {_build_course_description(course_name, course_instructor, course_date)}')
 
 def _update_availability_status(table, tracker_query, response_json):
     status_old = tracker_query['availability-status']

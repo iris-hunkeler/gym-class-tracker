@@ -3,8 +3,8 @@
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
 
 Person(user, "User", $sprite="person2")
-System(system, "Gym Class Tracker", "Allows users track availability of a gym class") 
-System_Ext(gym, "Gym Application", "", $descr="Web Application of gym for course overview and course sign up")
+System(system, "Gym Class Tracker", "Allows users to track availability of a gym class") 
+System_Ext(gym, "Gym Application", "Web Application of gym for course overview and course sign up")
 
 Rel_D(user, system, "Set up tracking for gym class")
 Rel_R(system, gym, "Get information about availability of gym class", "REST")
