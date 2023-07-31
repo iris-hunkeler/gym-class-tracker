@@ -115,7 +115,7 @@ def _build_message_for_availability_status_notification(response):
     if status_new == STATUS_AVAILABLE:
         return f'YES: Course {course_description} is now bookable'
     elif status_new == STATUS_UNAVAILABLE:
-        return f'NO: Course {course_description} is not bookable anymore!'
+        return f'NO: Course {course_description} is not currently bookable!'
     else:
         return f'WHAT!? The status of course {course_description} is unknown.'
 

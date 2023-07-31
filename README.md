@@ -64,6 +64,42 @@ gym-class-tracker$ sam local invoke ExecuteCheckFunction --event events/empty-ca
 gym-class-tracker$ sam logs -n ExecuteCheckFunction --stack-name gym-class-tracker --tail
 ```
 
+## Create a tracker query
+
+Example for a query in DynamoDB
+```
+{
+  "partition-key": {
+    "S": "query-1"
+  },
+  "sort-key": {
+    "S": "1"
+  },
+  "entity-name": {
+    "S": "check-query"
+  },
+  "active-status": {
+    "S": "1"
+  },
+  "availability-status": {
+    "S": "Unknown"
+  },
+  "center-id": {
+    "S": "23"
+  },
+  "course-title": {
+    "S": "BODYPUMP® 55'"
+  },
+  "daytime-id": {
+    "S": "4"
+  },
+  "weekday-id": {
+    "S": "3"
+  }
+}
+```
+
+
 ## Cleanup
 
 **Delete** the deployed application again:
