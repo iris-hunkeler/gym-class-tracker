@@ -48,20 +48,20 @@ sam deploy --parameter-overrides EmailAddress=[enter email address to send notif
 
 ```bash
 # build: installs dependencies and creates a deployment package in .aws-sam/build
-gym-class-tracker$ sam build --use-container
+sam build --use-container
 ```
 
 **Run functions locally** and invoke them with the `sam local invoke` command. Test events are included in the `events` folder in this project.
 
 ```bash
-gym-class-tracker$ sam local invoke ExecuteCheckFunction --event events/empty-call.json
+sam local invoke ExecuteCheckFunction --event events/empty-call.json
 ```
 
 ## Fetch, tail, and filter Lambda function logs
 
 **Read logfiles** from the deployed Lambda function using the SAM CLI:
 ```bash
-gym-class-tracker$ sam logs -n ExecuteCheckFunction --stack-name gym-class-tracker --tail
+sam logs -n ExecuteCheckFunction --stack-name gym-class-tracker --tail
 ```
 
 ## Create a tracker query
@@ -99,6 +99,21 @@ Example for a query in DynamoDB
 }
 ```
 
+### Variables
+
+center-id:
+* 23 = Zürich Altstetten
+
+daytime-id:
+* 1 = morning
+* 2 = noon
+* 3 = afternoon
+* 4 = evening
+
+weekday-id:
+* 1 = Monday
+* ... 
+* 7 = Sunday
 
 ## Cleanup
 

@@ -3,8 +3,6 @@ Transform: AWS::Serverless-2016-10-31
 Description: >
   gym-class-tracker
 
-  Sample SAM Template for gym-class-tracker
-
 Globals:
   Function:
     Timeout: 3
